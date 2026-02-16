@@ -5,10 +5,12 @@
 use core::ops::{Deref, DerefMut};
 
 use crate::{
-    Digest, EpochId, GasCostSummary, ObjectId, ObjectReference, Version,
-    effects::{InputSharedObject, ObjectChange, TransactionEffectsAPI},
+    Address, Digest, EpochId, GasCostSummary, IdOperation, ObjectId, ObjectReference, Version,
+    effects::{
+        InputSharedObject, ObjectChange, TransactionEffectsAPI, TransactionEffectsAPIForTesting,
+    },
     execution_status::ExecutionStatus,
-    object::Owner,
+    object::{OBJECT_START_VERSION, Owner},
 };
 
 /// Version 1 of TransactionEffects
@@ -138,6 +140,10 @@ impl<T: TransactionEffectsAPI> TransactionEffectsAPI for Box<T> {
         self.deref().object_changes()
     }
 
+    fn gas_object(&self) -> (ObjectReference, Owner) {
+        self.deref().gas_object()
+    }
+
     fn events_digest(&self) -> Option<&Digest> {
         self.deref().events_digest()
     }
@@ -157,7 +163,9 @@ impl<T: TransactionEffectsAPI> TransactionEffectsAPI for Box<T> {
     fn unchanged_shared_objects(&self) -> Vec<(ObjectId, UnchangedSharedKind)> {
         self.deref().unchanged_shared_objects()
     }
+}
 
+impl<T: TransactionEffectsAPIForTesting> TransactionEffectsAPIForTesting for Box<T> {
     fn status_mut_for_testing(&mut self) -> &mut ExecutionStatus {
         self.deref_mut().status_mut_for_testing()
     }
@@ -172,6 +180,21 @@ impl<T: TransactionEffectsAPI> TransactionEffectsAPI for Box<T> {
 
     fn dependencies_mut_for_testing(&mut self) -> &mut Vec<Digest> {
         self.deref_mut().dependencies_mut_for_testing()
+    }
+
+    fn unsafe_add_input_shared_object_for_testing(&mut self, kind: InputSharedObject) {
+        self.deref_mut()
+            .unsafe_add_input_shared_object_for_testing(kind);
+    }
+
+    fn unsafe_add_deleted_live_object_for_testing(&mut self, object_ref: ObjectReference) {
+        self.deref_mut()
+            .unsafe_add_deleted_live_object_for_testing(object_ref);
+    }
+
+    fn unsafe_add_object_tombstone_for_testing(&mut self, object_ref: ObjectReference) {
+        self.deref_mut()
+            .unsafe_add_object_tombstone_for_testing(object_ref);
     }
 }
 
@@ -440,6 +463,24 @@ impl TransactionEffectsAPI for TransactionEffectsV1 {
             .collect()
     }
 
+    fn gas_object(&self) -> (ObjectReference, Owner) {
+        if let Some(gas_object_index) = self.gas_object_index {
+            let changed = &self.changed_objects[gas_object_index as usize];
+            match changed.output_state {
+                ObjectOut::ObjectWrite { digest, owner } => (
+                    ObjectReference::new(changed.object_id, self.lamport_version, digest),
+                    owner,
+                ),
+                _ => panic!("Gas object must be an ObjectWrite in changed_objects"),
+            }
+        } else {
+            (
+                ObjectReference::new(ObjectId::ZERO, Version::default(), Digest::MIN),
+                Owner::Address(Address::ZERO),
+            )
+        }
+    }
+
     fn events_digest(&self) -> Option<&Digest> {
         self.events_digest.as_ref()
     }
@@ -462,7 +503,9 @@ impl TransactionEffectsAPI for TransactionEffectsV1 {
             .map(|unchanged| (unchanged.object_id, unchanged.kind.clone()))
             .collect()
     }
+}
 
+impl TransactionEffectsAPIForTesting for TransactionEffectsV1 {
     fn status_mut_for_testing(&mut self) -> &mut ExecutionStatus {
         &mut self.status
     }
@@ -477,6 +520,83 @@ impl TransactionEffectsAPI for TransactionEffectsV1 {
 
     fn dependencies_mut_for_testing(&mut self) -> &mut Vec<Digest> {
         &mut self.dependencies
+    }
+
+    fn unsafe_add_input_shared_object_for_testing(&mut self, kind: InputSharedObject) {
+        match kind {
+            InputSharedObject::Mutate(object_ref) => {
+                let (object_id, version, digest) = object_ref.into_parts();
+                self.changed_objects.push(ChangedObject {
+                    object_id,
+                    input_state: ObjectIn::Data {
+                        version,
+                        digest,
+                        owner: Owner::Shared(OBJECT_START_VERSION),
+                    },
+                    output_state: ObjectOut::ObjectWrite {
+                        digest,
+                        owner: Owner::Shared(version),
+                    },
+                    id_operation: IdOperation::None,
+                })
+            }
+            InputSharedObject::ReadOnly(object_ref) => {
+                let (object_id, version, digest) = object_ref.into_parts();
+                self.unchanged_shared_objects.push(UnchangedSharedObject {
+                    object_id,
+                    kind: UnchangedSharedKind::ReadOnlyRoot { version, digest },
+                })
+            }
+            InputSharedObject::ReadDeleted(object_id, version) => {
+                self.unchanged_shared_objects.push(UnchangedSharedObject {
+                    object_id,
+                    kind: UnchangedSharedKind::ReadDeleted { version },
+                })
+            }
+            InputSharedObject::MutateDeleted(object_id, version) => {
+                self.unchanged_shared_objects.push(UnchangedSharedObject {
+                    object_id,
+                    kind: UnchangedSharedKind::MutateDeleted { version },
+                })
+            }
+            InputSharedObject::Cancelled(object_id, version) => {
+                self.unchanged_shared_objects.push(UnchangedSharedObject {
+                    object_id,
+                    kind: UnchangedSharedKind::Cancelled { version },
+                })
+            }
+        }
+    }
+
+    fn unsafe_add_deleted_live_object_for_testing(&mut self, object_ref: ObjectReference) {
+        let (object_id, version, digest) = object_ref.into_parts();
+        self.changed_objects.push(ChangedObject {
+            object_id,
+            input_state: ObjectIn::Data {
+                version,
+                digest,
+                owner: Owner::Address(Address::ZERO),
+            },
+            output_state: ObjectOut::ObjectWrite {
+                digest,
+                owner: Owner::Address(Address::ZERO),
+            },
+            id_operation: IdOperation::None,
+        })
+    }
+
+    fn unsafe_add_object_tombstone_for_testing(&mut self, object_ref: ObjectReference) {
+        let (object_id, version, digest) = object_ref.into_parts();
+        self.changed_objects.push(ChangedObject {
+            object_id,
+            input_state: ObjectIn::Data {
+                version,
+                digest,
+                owner: Owner::Address(Address::ZERO),
+            },
+            output_state: ObjectOut::Missing,
+            id_operation: IdOperation::Deleted,
+        })
     }
 }
 
@@ -762,40 +882,6 @@ impl ObjectOut {
     pub fn package_digest(&self) -> Digest {
         self.package_digest_opt().expect("package does not exist")
     }
-}
-
-/// Defines what happened to an ObjectId during execution
-///
-/// # BCS
-///
-/// The BCS serialized form for this type is defined by the following ABNF:
-///
-/// ```text
-/// id-operation =  id-operation-none
-///              =/ id-operation-created
-///              =/ id-operation-deleted
-///
-/// id-operation-none       = %x00
-/// id-operation-created    = %x01
-/// id-operation-deleted    = %x02
-/// ```
-#[derive(Eq, PartialEq, Copy, Clone, Debug)]
-#[cfg_attr(
-    feature = "serde",
-    derive(serde::Serialize, serde::Deserialize),
-    serde(rename_all = "lowercase")
-)]
-#[cfg_attr(feature = "schemars", derive(schemars::JsonSchema))]
-#[cfg_attr(feature = "proptest", derive(test_strategy::Arbitrary))]
-#[non_exhaustive]
-pub enum IdOperation {
-    None,
-    Created,
-    Deleted,
-}
-
-impl IdOperation {
-    crate::def_is!(None, Created, Deleted);
 }
 
 #[cfg(feature = "serde")]

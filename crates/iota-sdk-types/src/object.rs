@@ -7,6 +7,8 @@ use std::collections::BTreeMap;
 use super::{Address, Digest, Identifier, ObjectId, StructTag};
 use crate::Version;
 
+pub const OBJECT_START_VERSION: Version = Version::from_u64(1);
+
 /// Reference to an object
 ///
 /// Contains sufficient information to uniquely identify a specific object.
