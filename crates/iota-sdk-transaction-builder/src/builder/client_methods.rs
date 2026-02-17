@@ -7,8 +7,8 @@ use iota_graphql_client::{
     query_types::{ObjectFilter, TransactionMetadata},
 };
 use iota_types::{
-    Address, Digest, Object, ObjectId, SignedTransaction, Transaction, TransactionEffects, TypeTag,
-    UserSignature, Version,
+    Address, Digest, Object, ObjectId, SignedTransaction, Transaction, TransactionEffects,
+    TransactionEffectsAPI, TypeTag, UserSignature, Version,
 };
 
 /// A trait which defines methods needed from the client for the Transaction
@@ -224,7 +224,7 @@ impl ClientMethods for iota_graphql_client::Client {
 
     async fn estimate_tx_budget(&self, tx: &Transaction) -> Result<Option<u64>, Self::Error> {
         let res = self.dry_run_tx(tx, true).await?;
-        Ok(res.effects.map(|e| e.gas_summary().gas_used()))
+        Ok(res.effects.map(|e| e.gas_cost_summary().gas_used()))
     }
 
     async fn dry_run_tx(

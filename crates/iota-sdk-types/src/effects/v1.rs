@@ -76,10 +76,21 @@ pub struct TransactionEffectsV1 {
     pub auxiliary_data_digest: Option<Digest>,
 }
 
-impl TransactionEffectsV1 {
-    /// The gas used in this transaction.
-    pub fn gas_summary(&self) -> &GasCostSummary {
-        &self.gas_used
+impl Default for TransactionEffectsV1 {
+    fn default() -> Self {
+        Self {
+            status: ExecutionStatus::Success,
+            epoch: 0,
+            gas_used: GasCostSummary::default(),
+            transaction_digest: Digest::default(),
+            gas_object_index: None,
+            events_digest: None,
+            dependencies: vec![],
+            lamport_version: Version::default(),
+            changed_objects: vec![],
+            unchanged_shared_objects: vec![],
+            auxiliary_data_digest: None,
+        }
     }
 }
 

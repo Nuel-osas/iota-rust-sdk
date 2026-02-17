@@ -51,26 +51,11 @@ impl TransactionEffects {
         let Self::V1(effects) = self;
         *effects
     }
+}
 
-    /// Return the status of the transaction.
-    pub fn status(&self) -> &ExecutionStatus {
-        match self {
-            TransactionEffects::V1(e) => e.status(),
-        }
-    }
-
-    /// Return the epoch in which this transaction was executed.
-    pub fn epoch(&self) -> u64 {
-        match self {
-            TransactionEffects::V1(e) => e.epoch(),
-        }
-    }
-
-    /// Return the gas cost summary of the transaction.
-    pub fn gas_summary(&self) -> &crate::gas::GasCostSummary {
-        match self {
-            TransactionEffects::V1(e) => e.gas_summary(),
-        }
+impl Default for TransactionEffects {
+    fn default() -> Self {
+        TransactionEffects::V1(Box::new(Default::default()))
     }
 }
 
@@ -243,8 +228,10 @@ pub struct ObjectChange {
 
 #[enum_dispatch]
 pub trait TransactionEffectsAPI {
+    /// Return the status of the transaction.
     fn status(&self) -> &ExecutionStatus;
     fn into_status(self) -> ExecutionStatus;
+    /// Return the epoch in which this transaction was executed.
     fn epoch(&self) -> EpochId;
     fn modified_at_versions(&self) -> Vec<(ObjectId, Version)>;
     /// The version assigned to all output objects (apart from packages).
@@ -265,6 +252,7 @@ pub trait TransactionEffectsAPI {
     fn events_digest(&self) -> Option<&Digest>;
     fn dependencies(&self) -> &[Digest];
     fn transaction_digest(&self) -> &Digest;
+    /// Return the gas cost summary of the transaction.
     fn gas_cost_summary(&self) -> &GasCostSummary;
     fn deleted_mutably_accessed_shared_objects(&self) -> Vec<ObjectId> {
         self.input_shared_objects()
