@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"mod":["address","checkpoint","coin","crypto","digest","events","execution_status","gas","iota_names","move_package","object","signature","struct_tag","transaction","type_tag","validator"]};

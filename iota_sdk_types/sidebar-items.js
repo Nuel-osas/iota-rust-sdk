@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"macro":["def_is","def_is_as_into_opt"],"mod":["address","checkpoint","crypto","digest","effects","events","execution_status","framework","gas","hash","iota_names","move_package","object","object_id","transaction","type_tag","u256","validator"]};

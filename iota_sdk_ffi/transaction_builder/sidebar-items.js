@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"mod":["move_authenticator","ptb_arg","signer"]};

@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"mod":["api","client","client_methods","faucet","output_types","pagination","query_types"]};

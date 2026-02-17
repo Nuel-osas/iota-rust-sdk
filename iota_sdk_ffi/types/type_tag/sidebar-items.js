@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["type_tag_from_bcs","type_tag_from_json","type_tag_to_bcs","type_tag_to_json"],"struct":["TypeTag"]};

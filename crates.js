@@ -1,0 +1,2 @@
+window.ALL_CRATES = ["iota_sdk","iota_sdk_crypto","iota_sdk_ffi","iota_sdk_graphql_client","iota_sdk_graphql_client_build","iota_sdk_transaction_builder","iota_sdk_types","uniffi_bindgen"];
+//{"start":21,"fragment_lengths":[10,18,15,26,32,31,17,17]}

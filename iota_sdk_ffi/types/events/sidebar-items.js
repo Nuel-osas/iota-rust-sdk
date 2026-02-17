@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["event_from_bcs","event_from_json","event_to_bcs","event_to_json","transaction_events_from_bcs","transaction_events_from_json","transaction_events_to_bcs","transaction_events_to_json"],"struct":["Event","TransactionEvents"]};

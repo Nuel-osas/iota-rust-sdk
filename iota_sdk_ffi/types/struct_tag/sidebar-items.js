@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["identifier_from_bcs","identifier_from_json","identifier_to_bcs","identifier_to_json","struct_tag_from_bcs","struct_tag_from_json","struct_tag_to_bcs","struct_tag_to_json"],"struct":["Identifier","StructTag"]};
